@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, TrendingUp, Calculator, Shield, Smartphone, CheckCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-image.jpg";
 
 const Index = () => {
@@ -17,8 +18,12 @@ const Index = () => {
             <span className="text-xl font-bold text-foreground">ShiftTracker</span>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="ghost">התחבר</Button>
-            <Button variant="hero">התחל חינם</Button>
+            <Button asChild variant="ghost">
+              <Link to="/login">התחבר</Link>
+            </Button>
+            <Button asChild variant="hero">
+              <Link to="/register">התחל חינם</Link>
+            </Button>
           </div>
         </div>
       </header>
@@ -37,12 +42,16 @@ const Index = () => {
               <p className="text-xl text-muted-foreground leading-relaxed">
                 עקוב אחרי המשמרות שלך, חשב את ההכנסות באופן אוטומטי, ותמיד תדע אם יש לך מספיק כסף לכסות את החשבונות.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button variant="hero" size="lg" className="text-lg">
-                  התחל לעקוב עכשיו
+              <div className="flex gap-4">
+                <Button asChild size="lg" className="text-lg px-8 py-6" variant="income">
+                  <Link to="/register">
+                    התחל עכשיו - חינם
+                  </Link>
                 </Button>
-                <Button variant="outline" size="lg" className="text-lg">
-                  למד איך זה עובד
+                <Button asChild size="lg" className="text-lg px-8 py-6" variant="outline">
+                  <Link to="/login">
+                    התחבר לחשבון
+                  </Link>
                 </Button>
               </div>
             </div>
@@ -179,8 +188,8 @@ const Index = () => {
           <p className="text-xl text-white/90 mb-8">
             התחל עכשיו וחווה מה זה לדעת בדיוק כמה כסף יש לך
           </p>
-          <Button variant="secondary" size="lg" className="text-lg">
-            התחל עכשיו - חינם
+          <Button asChild variant="secondary" size="lg" className="text-lg">
+            <Link to="/register">התחל עכשיו - חינם</Link>
           </Button>
         </div>
       </section>

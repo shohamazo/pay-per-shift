@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Clock, Calendar, DollarSign, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface Shift {
   id: string;
@@ -18,12 +20,30 @@ interface Shift {
 
 const ShiftLogger = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const [shift, setShift] = useState({
     date: new Date().toISOString().split('T')[0],
     startTime: "",
     endTime: "",
     hourlyRate: 35,
   });
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user);
+      
+      if (session?.user?.user_metadata?.hourly_rate) {
+        setShift(prev => ({ 
+          ...prev, 
+          hourlyRate: session.user.user_metadata.hourly_rate 
+        }));
+      }
+    };
+    getUser();
+  }, []);
 
   const calculateEarnings = () => {
     if (!shift.startTime || !shift.endTime) return 0;
@@ -40,8 +60,9 @@ const ShiftLogger = () => {
     return duration * shift.hourlyRate;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
     if (!shift.startTime || !shift.endTime) {
       toast({
@@ -49,24 +70,75 @@ const ShiftLogger = () => {
         description: "אנא מלא את כל השדות",
         variant: "destructive",
       });
+      setLoading(false);
       return;
     }
 
-    const earnings = calculateEarnings();
-    
-    toast({
-      title: "המשמרת נוספה בהצלחה!",
-      description: `הרווחת ₪${earnings.toFixed(2)} מהמשמרת הזו`,
-      variant: "default",
-    });
+    if (!user) {
+      toast({
+        title: "שגיאה",
+        description: "יש להתחבר כדי לשמור משמרת",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
-    // Reset form
-    setShift({
-      date: new Date().toISOString().split('T')[0],
-      startTime: "",
-      endTime: "",
-      hourlyRate: 35,
-    });
+    try {
+      const start = new Date(`${shift.date}T${shift.startTime}`);
+      const end = new Date(`${shift.date}T${shift.endTime}`);
+      
+      if (end < start) {
+        end.setDate(end.getDate() + 1);
+      }
+      
+      const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      const earnings = duration * shift.hourlyRate;
+
+      const { error } = await supabase
+        .from('shifts')
+        .insert({
+          user_id: user.id,
+          date: shift.date,
+          start_time: shift.startTime,
+          end_time: shift.endTime,
+          hourly_rate: shift.hourlyRate,
+          duration: duration,
+          earnings: earnings,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "המשמרת נוספה בהצלחה!",
+        description: `הרווחת ₪${earnings.toFixed(2)} מהמשמרת הזו`,
+        variant: "default",
+      });
+
+      // Reset form
+      setShift({
+        date: new Date().toISOString().split('T')[0],
+        startTime: "",
+        endTime: "",
+        hourlyRate: shift.hourlyRate, // Keep the same hourly rate
+      });
+
+      // Navigate to dashboard after a short delay
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
+
+    } catch (error: any) {
+      toast({
+        title: "שגיאה",
+        description: "לא הצלחנו לשמור את המשמרת, נסה שוב",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const earnings = calculateEarnings();
@@ -156,8 +228,13 @@ const ShiftLogger = () => {
               </Card>
             )}
 
-            <Button type="submit" className="w-full" variant="income">
-              שמור משמרת
+            <Button 
+              type="submit" 
+              className="w-full" 
+              variant="income"
+              disabled={loading}
+            >
+              {loading ? "שומר..." : "שמור משמרת"}
             </Button>
           </form>
         </CardContent>

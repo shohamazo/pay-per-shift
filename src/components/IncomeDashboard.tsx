@@ -1,109 +1,149 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Calendar, Clock, DollarSign, Target, Plus } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { TrendingUp, DollarSign, Calendar, Target, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock data for demonstration
-const mockData = {
-  currentMonth: {
-    earned: 3450,
-    projected: 4200,
-    fixedExpenses: 2800,
-    remaining: 650,
-    shiftsWorked: 12,
-    hoursWorked: 98,
-  },
-  recentShifts: [
-    { id: 1, date: "2024-01-15", duration: 8, earnings: 280, location: "מקום עבודה ראשי" },
-    { id: 2, date: "2024-01-14", duration: 6, earnings: 210, location: "משמרת לילה" },
-    { id: 3, date: "2024-01-13", duration: 8.5, earnings: 297.5, location: "מקום עבודה ראשי" },
-  ],
-  thisWeek: {
-    shifts: 3,
-    hours: 22.5,
-    earnings: 787.5,
-  }
-};
+interface Shift {
+  id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  hourly_rate: number;
+  duration: number;
+  earnings: number;
+}
 
 const IncomeDashboard = () => {
-  const { currentMonth, recentShifts, thisWeek } = mockData;
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const getShifts = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user);
+      
+      if (!session?.user) return;
+
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+      
+      const { data, error } = await supabase
+        .from('shifts')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .gte('date', `${currentMonth}-01`)
+        .lt('date', `${new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().slice(0, 10)}`)
+        .order('date', { ascending: false });
+
+      if (!error && data) {
+        setShifts(data);
+      }
+      setLoading(false);
+    };
+
+    getShifts();
+  }, []);
+
+  const monthlyIncome = shifts.reduce((total, shift) => total + shift.earnings, 0);
+  const monthlyExpenses = 2800; // This could be made dynamic later
+  const remainingIncome = monthlyIncome - monthlyExpenses;
+  const progressPercentage = Math.min((monthlyIncome / 4000) * 100, 100);
+  const totalHours = shifts.reduce((total, shift) => total + shift.duration, 0);
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-32 bg-card rounded-lg"></div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 bg-card rounded-lg"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">שלום, משה!</h1>
-          <p className="text-muted-foreground">הנה המצב הכלכלי שלך לחודש {new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</p>
-        </div>
-        <Button variant="income" className="gap-2">
-          <Plus className="w-4 h-4" />
-          רשום משמרת
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">
+          שלום, {user?.user_metadata?.full_name || 'משתמש'}!
+        </h1>
+        <p className="text-muted-foreground">
+          הנה המצב הכלכלי שלך לחודש {new Date().toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}
+        </p>
       </div>
 
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Current Earnings */}
-        <Card className="bg-gradient-to-br from-income/10 to-income/5 border-income/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              הרווחת החודש
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-income">₪{currentMonth.earned.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              מתוך ₪{currentMonth.projected.toLocaleString()} צפוי
-            </p>
-          </CardContent>
-        </Card>
+      {/* Financial Progress */}
+      <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
+        <CardHeader>
+          <CardTitle>התקדמות החודש</CardTitle>
+          <CardDescription>
+            הגעת ל-{progressPercentage.toFixed(0)}% מיעד החודש (₪4,000)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Progress value={progressPercentage} className="h-3" />
+          <div className="flex justify-between text-sm text-muted-foreground mt-2">
+            <span>₪0</span>
+            <span>₪4,000</span>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Fixed Expenses */}
-        <Card className="bg-gradient-to-br from-expense/10 to-expense/5 border-expense/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              חשבונות קבועים
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-expense">₪{currentMonth.fixedExpenses.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              דירה, ביטוח, חשמל
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Remaining */}
-        <Card className="bg-gradient-to-br from-success/10 to-success/5 border-success/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <DollarSign className="w-4 h-4" />
-              נשאר לך
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">₪{currentMonth.remaining.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              לחיסכון ובילויים
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Hours Worked */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              שעות עבודה
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">סה"כ הכנסות החודש</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{currentMonth.hoursWorked}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              ב-{currentMonth.shiftsWorked} משמרות
+            <div className="text-2xl font-bold text-income">₪{monthlyIncome.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              מ-{shifts.length} משמרות
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">הוצאות קבועות</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-expense">₪{monthlyExpenses.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              דירה, חשמל, אוכל
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">נותר לסוף החודש</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${remainingIncome >= 0 ? 'text-income' : 'text-expense'}`}>
+              ₪{Math.abs(remainingIncome).toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {remainingIncome >= 0 ? 'יש לך עודף' : 'חסר לכיסוי הוצאות'}
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">שעות עבודה החודש</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalHours.toFixed(1)}</div>
+            <p className="text-xs text-muted-foreground">
+              ממוצע {shifts.length > 0 ? (totalHours / shifts.length).toFixed(1) : 0} שעות למשמרת
             </p>
           </CardContent>
         </Card>
@@ -115,77 +155,60 @@ const IncomeDashboard = () => {
           <CardTitle className="text-lg">בדיקת מצב כלכלי</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-foreground font-medium">
-                הרווחת ₪{currentMonth.earned.toLocaleString()} החודש. החשבונות שלך עומדים על ₪{currentMonth.fixedExpenses.toLocaleString()}.
+          <div className="space-y-2">
+            <p className="text-foreground font-medium">
+              הרווחת ₪{monthlyIncome.toLocaleString()} החודש. החשבונות שלך עומדים על ₪{monthlyExpenses.toLocaleString()}.
+            </p>
+            {remainingIncome >= 0 ? (
+              <p className="text-income font-semibold">
+                ✅ יש לך מספיק כסף לכסות את כל החשבונות! נשאר לך ₪{remainingIncome.toLocaleString()} לחיסכון.
               </p>
-              <p className="text-success font-semibold mt-2">
-                ✅ יש לך מספיק כסף לכסות את כל החשבונות! נשאר לך ₪{currentMonth.remaining.toLocaleString()} לחיסכון.
+            ) : (
+              <p className="text-expense font-semibold">
+                ⚠️ אתה צריך לעבוד עוד כדי לכסות את החשבונות. חסר לך ₪{Math.abs(remainingIncome).toLocaleString()}.
               </p>
-            </div>
-            <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-              מצב יציב
-            </Badge>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* This Week Summary */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            השבוע הזה
-          </CardTitle>
-          <CardDescription>סיכום המשמרות של השבוע הנוכחי</CardDescription>
+          <CardTitle>משמרות אחרונות</CardTitle>
+          <CardDescription>
+            הצג את המשמרות שעבדת השבוע
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold text-primary">{thisWeek.shifts}</p>
-              <p className="text-sm text-muted-foreground">משמרות</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-primary">{thisWeek.hours}</p>
-              <p className="text-sm text-muted-foreground">שעות</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-primary">₪{thisWeek.earnings}</p>
-              <p className="text-sm text-muted-foreground">רווחים</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Shifts */}
-      <Card>
-        <CardHeader>
-          <CardTitle>המשמרות האחרונות</CardTitle>
-          <CardDescription>הרווחים מהמשמרות שעבדת לאחרונה</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {recentShifts.map((shift) => (
-              <div key={shift.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Clock className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">
-                      {new Date(shift.date).toLocaleDateString('he-IL')}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {shift.duration} שעות • {shift.location}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-income">₪{shift.earnings}</p>
-                </div>
+          <div className="space-y-4">
+            {shifts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p>עדיין לא רשמת משמרות החודש</p>
+                <p className="text-xs">התחל לרשום כדי לראות את ההכנסות שלך</p>
               </div>
-            ))}
+            ) : (
+              shifts.slice(0, 5).map((shift) => (
+                <div key={shift.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">
+                        {new Date(shift.date).toLocaleDateString('he-IL')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {shift.duration.toFixed(1)} שעות עבודה • ₪{shift.hourly_rate}/שעה
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-income">
+                      ₪{shift.earnings.toFixed(0)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
