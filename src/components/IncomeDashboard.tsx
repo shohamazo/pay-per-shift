@@ -37,7 +37,9 @@ const IncomeDashboard = () => {
         .order('date', { ascending: false });
 
       if (!error && data) {
-        setShifts(data);
+        // Filter to only shifts data
+        const shiftsData = (data || []).filter((item: any) => item.date && item.start_time) as Shift[];
+        setShifts(shiftsData);
       }
       setLoading(false);
     };

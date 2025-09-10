@@ -3,7 +3,7 @@ import { useNavigate, Outlet } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, User, BarChart3, Plus, Home } from "lucide-react";
+import { LogOut, User, BarChart3, Plus, Home, Calendar, Wallet } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const AppLayout = () => {
@@ -66,6 +66,8 @@ const AppLayout = () => {
   const navItems = [
     { path: "/dashboard", label: "דשבורד", icon: Home },
     { path: "/add-shift", label: "רישום משמרת", icon: Plus },
+    { path: "/shift-management", label: "ניהול משמרות", icon: Calendar },
+    { path: "/budget-management", label: "ניהול תקציב", icon: Wallet },
     { path: "/reports", label: "דוחות", icon: BarChart3 },
   ];
 

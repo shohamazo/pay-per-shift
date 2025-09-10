@@ -71,51 +71,103 @@ export const supabase = {
     }
   },
   
-  from: (table: string) => ({
-    insert: async (data: any) => {
-      console.log(`Mock insert to ${table}:`, data);
-      return { data, error: null };
-    },
-    
-    select: (columns?: string) => ({
-      eq: (column: string, value: any) => ({
-        gte: (column: string, value: any) => ({
-          lt: (column: string, value: any) => ({
-            order: (column: string, options?: any) => {
-              const result = async () => {
-                // Mock data for shifts
-                if (table === 'shifts') {
-                  return {
-                    data: [
-                      {
-                        id: "1",
-                        date: "2024-01-15",
-                        start_time: "09:00",
-                        end_time: "17:00",
-                        hourly_rate: 35,
-                        duration: 8,
-                        earnings: 280,
-                      },
-                      {
-                        id: "2", 
-                        date: "2024-01-14",
-                        start_time: "10:00",
-                        end_time: "16:00",
-                        hourly_rate: 35,
-                        duration: 6,
-                        earnings: 210,
-                      }
-                    ],
-                    error: null
-                  };
-                }
-                return { data: [], error: null };
-              };
-              return result();
-            }
+  from: (table: string) => {
+    const getMockData = () => {
+      if (table === 'shifts') {
+        return [
+          {
+            id: "1",
+            date: "2024-01-15",
+            start_time: "09:00",
+            end_time: "17:00",
+            hourly_rate: 35,
+            duration: 8,
+            earnings: 280,
+          },
+          {
+            id: "2", 
+            date: "2024-01-14",
+            start_time: "10:00",
+            end_time: "16:00",
+            hourly_rate: 35,
+            duration: 6,
+            earnings: 210,
+          }
+        ];
+      }
+      if (table === 'expenses') {
+        return [
+          {
+            id: "exp1",
+            name: "שכר דירה",
+            amount: 4500,
+            category: "housing",
+            is_recurring: true,
+          },
+          {
+            id: "exp2",
+            name: "חשמל",
+            amount: 300,
+            category: "utilities",
+            is_recurring: true,
+          }
+        ];
+      }
+      return [];
+    };
+
+    return {
+      insert: async (data: any) => {
+        console.log(`Mock insert to ${table}:`, data);
+        const newItem = { ...data, id: Date.now().toString() };
+        
+        return {
+          data: newItem,
+          error: null,
+          select: () => ({
+            single: async () => ({ data: newItem, error: null })
           })
-        })
+        };
+      },
+      
+      select: (columns?: string) => ({
+        eq: (column: string, value: any) => ({
+          order: (column: string, options?: any) => {
+            return Promise.resolve({
+              data: getMockData(),
+              error: null
+            });
+          },
+          gte: (column: string, value: any) => ({
+            lt: (column: string, value: any) => ({
+              order: (column: string, options?: any) => {
+                return Promise.resolve({
+                  data: getMockData(),
+                  error: null
+                });
+              }
+            })
+          })
+        }),
+        order: (column: string, options?: any) => {
+          return Promise.resolve({
+            data: getMockData(),
+            error: null
+          });
+        }
+      }),
+      
+      update: (data: any) => ({
+        eq: (column: string, value: any) => {
+          return Promise.resolve({ data, error: null });
+        }
+      }),
+      
+      delete: () => ({
+        eq: (column: string, value: any) => {
+          return Promise.resolve({ data: null, error: null });
+        }
       })
-    })
-  })
+    };
+  }
 };
