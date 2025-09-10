@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock, Calendar, DollarSign, Plus } from "lucide-react";
+import { Clock, Calendar, DollarSign, Plus, Play, Square } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +23,7 @@ const ShiftLogger = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [isShiftActive, setIsShiftActive] = useState(false);
   const [shift, setShift] = useState({
     date: new Date().toISOString().split('T')[0],
     startTime: "",
@@ -44,6 +45,42 @@ const ShiftLogger = () => {
     };
     getUser();
   }, []);
+
+  const startShift = () => {
+    const now = new Date();
+    const currentTime = now.toTimeString().slice(0, 5);
+    
+    setShift(prev => ({
+      ...prev,
+      startTime: currentTime,
+      endTime: "",
+      date: now.toISOString().split('T')[0]
+    }));
+    
+    setIsShiftActive(true);
+    
+    toast({
+      title: "המשמרת התחילה!",
+      description: `המשמרת התחילה בשעה ${currentTime}`,
+    });
+  };
+
+  const endShift = () => {
+    const now = new Date();
+    const currentTime = now.toTimeString().slice(0, 5);
+    
+    setShift(prev => ({
+      ...prev,
+      endTime: currentTime
+    }));
+    
+    setIsShiftActive(false);
+    
+    toast({
+      title: "המשמרת הסתיימה!",
+      description: `המשמרת הסתיימה בשעה ${currentTime}`,
+    });
+  };
 
   const calculateEarnings = () => {
     if (!shift.startTime || !shift.endTime) return 0;
@@ -156,6 +193,38 @@ const ShiftLogger = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Quick Start/Stop Shift */}
+          <div className="mb-6 p-4 border border-border rounded-lg bg-card/30">
+            <h3 className="text-lg font-semibold mb-3 text-center">מעקב זמן אמת</h3>
+            <div className="flex justify-center">
+              {!isShiftActive ? (
+                <Button 
+                  onClick={startShift}
+                  size="lg"
+                  className="flex items-center gap-2 bg-income hover:bg-income/90"
+                >
+                  <Play className="w-5 h-5" />
+                  התחל משמרת
+                </Button>
+              ) : (
+                <Button 
+                  onClick={endShift}
+                  size="lg"
+                  variant="destructive"
+                  className="flex items-center gap-2"
+                >
+                  <Square className="w-5 h-5" />
+                  סיים משמרת
+                </Button>
+              )}
+            </div>
+            {isShiftActive && (
+              <p className="text-center text-sm text-muted-foreground mt-2">
+                המשמרת פעילה מאז {shift.startTime}
+              </p>
+            )}
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Date */}
             <div className="space-y-2">
