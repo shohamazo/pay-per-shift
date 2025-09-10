@@ -19,6 +19,50 @@ interface MockAuthResponse {
   error: any;
 }
 
+// In-memory storage for mock data
+const mockStorage = {
+  shifts: [
+    {
+      id: "1",
+      date: "2024-01-15",
+      start_time: "09:00",
+      end_time: "17:00",
+      hourly_rate: 35,
+      duration: 8,
+      earnings: 280,
+      user_id: "mock-user-id",
+    },
+    {
+      id: "2", 
+      date: "2024-01-14",
+      start_time: "10:00",
+      end_time: "16:00",
+      hourly_rate: 35,
+      duration: 6,
+      earnings: 210,
+      user_id: "mock-user-id",
+    }
+  ],
+  expenses: [
+    {
+      id: "exp1",
+      name: "שכר דירה",
+      amount: 4500,
+      category: "housing",
+      is_recurring: true,
+      user_id: "mock-user-id",
+    },
+    {
+      id: "exp2",
+      name: "חשמל",
+      amount: 300,
+      category: "utilities",
+      is_recurring: true,
+      user_id: "mock-user-id",
+    }
+  ]
+};
+
 const mockUser: MockUser = {
   id: "mock-user-id",
   email: "user@example.com",
@@ -74,44 +118,10 @@ export const supabase = {
   from: (table: string) => {
     const getMockData = () => {
       if (table === 'shifts') {
-        return [
-          {
-            id: "1",
-            date: "2024-01-15",
-            start_time: "09:00",
-            end_time: "17:00",
-            hourly_rate: 35,
-            duration: 8,
-            earnings: 280,
-          },
-          {
-            id: "2", 
-            date: "2024-01-14",
-            start_time: "10:00",
-            end_time: "16:00",
-            hourly_rate: 35,
-            duration: 6,
-            earnings: 210,
-          }
-        ];
+        return mockStorage.shifts;
       }
       if (table === 'expenses') {
-        return [
-          {
-            id: "exp1",
-            name: "שכר דירה",
-            amount: 4500,
-            category: "housing",
-            is_recurring: true,
-          },
-          {
-            id: "exp2",
-            name: "חשמל",
-            amount: 300,
-            category: "utilities",
-            is_recurring: true,
-          }
-        ];
+        return mockStorage.expenses;
       }
       return [];
     };
@@ -120,6 +130,13 @@ export const supabase = {
       insert: async (data: any) => {
         console.log(`Mock insert to ${table}:`, data);
         const newItem = { ...data, id: Date.now().toString() };
+        
+        // Actually add to storage
+        if (table === 'shifts') {
+          mockStorage.shifts.unshift(newItem);
+        } else if (table === 'expenses') {
+          mockStorage.expenses.unshift(newItem);
+        }
         
         return {
           data: newItem,
@@ -159,12 +176,30 @@ export const supabase = {
       
       update: (data: any) => ({
         eq: (column: string, value: any) => {
+          // Update item in storage
+          if (table === 'shifts') {
+            const index = mockStorage.shifts.findIndex(item => item.id === value);
+            if (index !== -1) {
+              mockStorage.shifts[index] = { ...mockStorage.shifts[index], ...data };
+            }
+          } else if (table === 'expenses') {
+            const index = mockStorage.expenses.findIndex(item => item.id === value);
+            if (index !== -1) {
+              mockStorage.expenses[index] = { ...mockStorage.expenses[index], ...data };
+            }
+          }
           return Promise.resolve({ data, error: null });
         }
       }),
       
       delete: () => ({
         eq: (column: string, value: any) => {
+          // Remove from storage
+          if (table === 'shifts') {
+            mockStorage.shifts = mockStorage.shifts.filter(item => item.id !== value);
+          } else if (table === 'expenses') {
+            mockStorage.expenses = mockStorage.expenses.filter(item => item.id !== value);
+          }
           return Promise.resolve({ data: null, error: null });
         }
       })
