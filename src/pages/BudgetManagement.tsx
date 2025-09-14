@@ -4,7 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Plus, Edit, Trash2, Home, Car, Phone, ShoppingCart, Coffee } from "lucide-react";
+import { 
+  DollarSign, Plus, Edit, Trash2, Home, Car, Phone, ShoppingCart, Coffee,
+  Receipt, Stethoscope, GraduationCap, Shirt, Gift, CreditCard, PiggyBank, 
+  Heart, Plane, Sparkles, Baby, MoreHorizontal
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -16,6 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,16 +38,107 @@ interface Expense {
   name: string;
   amount: number;
   category: string;
+  subcategory?: string;
   is_recurring: boolean;
 }
 
 const categories = [
-  { value: "housing", label: "דיור", icon: Home },
-  { value: "transportation", label: "תחבורה", icon: Car },
-  { value: "utilities", label: "חשמל ומים", icon: Phone },
-  { value: "groceries", label: "קניות", icon: ShoppingCart },
-  { value: "entertainment", label: "בילויים", icon: Coffee },
-  { value: "other", label: "אחר", icon: DollarSign },
+  { 
+    value: "housing", 
+    label: "🏠 דיור", 
+    icon: Home,
+    subcategories: ["שכר דירה", "משכנתא", "ארנונה", "חשבון חשמל", "חשבון מים", "חשבון גז", "ועד בית"]
+  },
+  { 
+    value: "shopping", 
+    label: "🛒 קניות", 
+    icon: ShoppingCart,
+    subcategories: ["קניות בסופר", "קניות לבית", "מוצרי ניקיון"]
+  },
+  { 
+    value: "transportation", 
+    label: "🚗 תחבורה", 
+    icon: Car,
+    subcategories: ["דלק", "ביטוח רכב", "תחבורה ציבורית", "מוניות", "חניה"]
+  },
+  { 
+    value: "food", 
+    label: "🍔 אוכל ושתיה", 
+    icon: Coffee,
+    subcategories: ["מסעדות", "בתי קפה", "אוכל מהיר", "משלוחים"]
+  },
+  { 
+    value: "utilities", 
+    label: "💡 חשבונות ושירותים", 
+    icon: Phone,
+    subcategories: ["טלפון", "אינטרנט", "כבלים", "מנויי סטרימינג"]
+  },
+  { 
+    value: "health", 
+    label: "🏥 בריאות", 
+    icon: Stethoscope,
+    subcategories: ["רופאים", "תרופות", "ביטוח בריאות", "טיפולים"]
+  },
+  { 
+    value: "education", 
+    label: "🎓 חינוך", 
+    icon: GraduationCap,
+    subcategories: ["שכר לימוד", "ספרים", "חוגים", "קורסים"]
+  },
+  { 
+    value: "clothing", 
+    label: "👕 ביגוד והנעלה", 
+    icon: Shirt,
+    subcategories: ["בגדים", "נעליים", "אקססוריז"]
+  },
+  { 
+    value: "entertainment", 
+    label: "🎁 בילוי ופנאי", 
+    icon: Gift,
+    subcategories: ["סרטים", "הצגות", "טיולים", "תחביבים", "ספורט"]
+  },
+  { 
+    value: "payments", 
+    label: "💳 תשלומים וחיובים", 
+    icon: CreditCard,
+    subcategories: ["כרטיסי אשראי", "הלוואות", "תשלום חובות"]
+  },
+  { 
+    value: "savings", 
+    label: "🏦 חיסכון והשקעות", 
+    icon: PiggyBank,
+    subcategories: ["חיסכון לפנסיה", "קופת גמל", "השקעות", "ביטוח חיים"]
+  },
+  { 
+    value: "pets", 
+    label: "🐶 חיות מחמד", 
+    icon: Heart,
+    subcategories: ["אוכל לחיות", "וטרינר", "ציוד וצעצועים"]
+  },
+  { 
+    value: "travel", 
+    label: "✈️ נסיעות", 
+    icon: Plane,
+    subcategories: ["טיסות", "מלונות", "הוצאות בחו\"ל", "ביטוח נסיעות"]
+  },
+  { 
+    value: "beauty", 
+    label: "💃 יופי וטיפוח", 
+    icon: Sparkles,
+    subcategories: ["ספר", "קוסמטיקאית", "מוצרי טיפוח", "ציפורניים"]
+  },
+  { 
+    value: "family", 
+    label: "👪 משפחה וילדים", 
+    icon: Baby,
+    subcategories: ["צעצועים", "בגדי ילדים", "בייביסיטר", "פעילויות ילדים"]
+  },
+  { 
+    value: "miscellaneous", 
+    label: "📈 הוצאות שונות", 
+    icon: MoreHorizontal,
+    subcategories: ["מנויים לאפליקציות", "תרומות", "הוצאות לא מתוכננות", "מתנות"]
+  }
 ];
 
 const BudgetManagement = () => {
@@ -55,7 +151,8 @@ const BudgetManagement = () => {
   const [newExpense, setNewExpense] = useState({
     name: "",
     amount: 0,
-    category: "other",
+    category: "miscellaneous",
+    subcategory: "",
     is_recurring: true,
   });
 
@@ -107,6 +204,7 @@ const BudgetManagement = () => {
             name: newExpense.name,
             amount: newExpense.amount,
             category: newExpense.category,
+            subcategory: newExpense.subcategory,
             is_recurring: newExpense.is_recurring,
           })
           .eq('id', editingExpense.id);
@@ -131,6 +229,7 @@ const BudgetManagement = () => {
             name: newExpense.name,
             amount: newExpense.amount,
             category: newExpense.category,
+            subcategory: newExpense.subcategory,
             is_recurring: newExpense.is_recurring,
           });
         
@@ -148,7 +247,7 @@ const BudgetManagement = () => {
 
       setIsDialogOpen(false);
       setEditingExpense(null);
-      setNewExpense({ name: "", amount: 0, category: "other", is_recurring: true });
+      setNewExpense({ name: "", amount: 0, category: "miscellaneous", subcategory: "", is_recurring: true });
     } catch (error) {
       toast({
         title: "שגיאה",
@@ -187,18 +286,24 @@ const BudgetManagement = () => {
       name: expense.name,
       amount: expense.amount,
       category: expense.category,
+      subcategory: expense.subcategory || "",
       is_recurring: expense.is_recurring,
     });
     setIsDialogOpen(true);
   };
 
   const getCategoryLabel = (categoryValue: string) => {
-    return categories.find(cat => cat.value === categoryValue)?.label || "אחר";
+    return categories.find(cat => cat.value === categoryValue)?.label || "📈 הוצאות שונות";
   };
 
   const getCategoryIcon = (categoryValue: string) => {
     const category = categories.find(cat => cat.value === categoryValue);
-    return category ? category.icon : DollarSign;
+    return category ? category.icon : MoreHorizontal;
+  };
+
+  const getSubcategories = (categoryValue: string) => {
+    const category = categories.find(cat => cat.value === categoryValue);
+    return category?.subcategories || [];
   };
 
   const totalMonthlyExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -260,19 +365,46 @@ const BudgetManagement = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">קטגוריה</Label>
-                <select
-                  id="category"
-                  value={newExpense.category}
-                  onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-background"
+                <Select 
+                  value={newExpense.category} 
+                  onValueChange={(value) => setNewExpense({ ...newExpense, category: value, subcategory: "" })}
                 >
-                  {categories.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="bg-background border-border">
+                    <SelectValue placeholder="בחר קטגוריה" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border shadow-lg z-50">
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value} className="hover:bg-accent">
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+              
+              {getSubcategories(newExpense.category).length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="subcategory">תת-קטגוריה (אופציונלי)</Label>
+                  <Select 
+                    value={newExpense.subcategory} 
+                    onValueChange={(value) => setNewExpense({ ...newExpense, subcategory: value })}
+                  >
+                    <SelectTrigger className="bg-background border-border">
+                      <SelectValue placeholder="בחר תת-קטגוריה" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border-border shadow-lg z-50">
+                      <SelectItem value="" className="hover:bg-accent">
+                        ללא תת-קטגוריה
+                      </SelectItem>
+                      {getSubcategories(newExpense.category).map((subcat) => (
+                        <SelectItem key={subcat} value={subcat} className="hover:bg-accent">
+                          {subcat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -366,7 +498,12 @@ const BudgetManagement = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <h3 className="font-semibold text-lg">{expense.name}</h3>
+                  <div className="space-y-1">
+                    <h3 className="font-semibold text-lg">{expense.name}</h3>
+                    {expense.subcategory && (
+                      <p className="text-sm text-muted-foreground">{expense.subcategory}</p>
+                    )}
+                  </div>
                   
                   <div className="pt-2 border-t border-border">
                     <div className="flex items-center justify-between">
