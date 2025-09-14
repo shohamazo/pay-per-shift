@@ -11,6 +11,7 @@ import AddShift from "./pages/AddShift";
 import Reports from "./pages/Reports";
 import ShiftManagement from "./pages/ShiftManagement";
 import BudgetManagement from "./pages/BudgetManagement";
+import JobSettings from "./components/JobSettings";
 import AppLayout from "./components/layout/AppLayout";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/add-shift" element={<AddShift />} />
             <Route path="/shift-management" element={<ShiftManagement />} />
             <Route path="/budget-management" element={<BudgetManagement />} />
+            <Route path="/job-settings" element={<JobSettings />} />
             <Route path="/reports" element={<Reports />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -3,10 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock, Calendar, DollarSign, Plus, Play, Square } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Clock, Calendar, DollarSign, Plus, Play, Square, Settings, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { calculateShiftEarnings, getSelectedJob } from "@/utils/shiftCalculations";
 
 interface Shift {
   id: string;
@@ -24,6 +27,8 @@ const ShiftLogger = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [isShiftActive, setIsShiftActive] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
+  const [jobs, setJobs] = useState<any[]>([]);
   const [shift, setShift] = useState({
     date: new Date().toISOString().split('T')[0],
     startTime: "",
@@ -35,15 +40,26 @@ const ShiftLogger = () => {
     const getUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user);
+    };
+    
+    const loadJobs = () => {
+      const savedJobs = localStorage.getItem('userJobs');
+      const savedSelectedJob = localStorage.getItem('selectedJob');
       
-      if (session?.user?.user_metadata?.hourly_rate) {
-        setShift(prev => ({ 
-          ...prev, 
-          hourlyRate: session.user.user_metadata.hourly_rate 
-        }));
+      if (savedJobs) {
+        const jobsData = JSON.parse(savedJobs);
+        setJobs(jobsData);
+        
+        if (savedSelectedJob && jobsData.find((j: any) => j.id === savedSelectedJob)) {
+          setSelectedJobId(savedSelectedJob);
+        } else if (jobsData.length > 0) {
+          setSelectedJobId(jobsData[0].id);
+        }
       }
     };
+    
     getUser();
+    loadJobs();
   }, []);
 
   const startShift = () => {
@@ -83,18 +99,12 @@ const ShiftLogger = () => {
   };
 
   const calculateEarnings = () => {
-    if (!shift.startTime || !shift.endTime) return 0;
+    if (!shift.startTime || !shift.endTime || !selectedJobId) return { totalEarnings: 0, breakdown: [] };
     
-    const start = new Date(`${shift.date}T${shift.startTime}`);
-    const end = new Date(`${shift.date}T${shift.endTime}`);
+    const selectedJob = jobs.find(job => job.id === selectedJobId);
+    if (!selectedJob) return { totalEarnings: 0, breakdown: [] };
     
-    if (end < start) {
-      // Handle shifts that cross midnight
-      end.setDate(end.getDate() + 1);
-    }
-    
-    const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    return duration * shift.hourlyRate;
+    return calculateShiftEarnings(shift.startTime, shift.endTime, shift.date, selectedJob);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,26 +132,35 @@ const ShiftLogger = () => {
     }
 
     try {
-      const start = new Date(`${shift.date}T${shift.startTime}`);
-      const end = new Date(`${shift.date}T${shift.endTime}`);
-      
-      if (end < start) {
-        end.setDate(end.getDate() + 1);
+      const selectedJob = jobs.find(job => job.id === selectedJobId);
+      if (!selectedJob) {
+        toast({
+          title: "שגיאה",
+          description: "אנא בחר עבודה",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
       }
-      
-      const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      const earnings = duration * shift.hourlyRate;
+
+      const calculation = calculateShiftEarnings(shift.startTime, shift.endTime, shift.date, selectedJob);
 
       const { error } = await supabase
         .from('shifts')
         .insert({
           user_id: user.id,
+          job_id: selectedJobId,
+          job_name: selectedJob.name,
           date: shift.date,
           start_time: shift.startTime,
           end_time: shift.endTime,
-          hourly_rate: shift.hourlyRate,
-          duration: duration,
-          earnings: earnings,
+          hourly_rate: selectedJob.baseRate,
+          duration: calculation.baseHours + calculation.overtimeHours + calculation.shabbatHours,
+          earnings: calculation.totalEarnings,
+          overtime_hours: calculation.overtimeHours,
+          shabbat_hours: calculation.shabbatHours,
+          night_hours: calculation.nightHours,
+          transport_cost: calculation.transportCost,
         });
 
       if (error) {
@@ -150,7 +169,7 @@ const ShiftLogger = () => {
 
       toast({
         title: "המשמרת נוספה בהצלחה!",
-        description: `הרווחת ₪${earnings.toFixed(2)} מהמשמרת הזו`,
+        description: `הרווחת ₪${calculation.totalEarnings.toFixed(2)} מהמשמרת הזו`,
         variant: "default",
       });
 
@@ -159,7 +178,7 @@ const ShiftLogger = () => {
         date: new Date().toISOString().split('T')[0],
         startTime: "",
         endTime: "",
-        hourlyRate: shift.hourlyRate, // Keep the same hourly rate
+        hourlyRate: shift.hourlyRate,
       });
 
       // Navigate to dashboard after a short delay
@@ -178,7 +197,8 @@ const ShiftLogger = () => {
     }
   };
 
-  const earnings = calculateEarnings();
+  const earningsData = calculateEarnings();
+  const selectedJob = jobs.find(job => job.id === selectedJobId);
 
   return (
     <div className="max-w-md mx-auto p-4">
@@ -193,6 +213,68 @@ const ShiftLogger = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Job Selection */}
+          {jobs.length > 0 ? (
+            <div className="mb-6 space-y-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  בחר עבודה
+                </Label>
+                <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="בחר עבודה למשמרת" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobs.map(job => (
+                      <SelectItem key={job.id} value={job.id}>
+                        {job.name} - ₪{job.baseRate}/שעה
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {selectedJob && (
+                <Card className="bg-muted/30">
+                  <CardContent className="pt-4">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>שעה רגילה:</span>
+                        <Badge variant="secondary">₪{selectedJob.baseRate}</Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>שעה נוספת:</span>
+                        <Badge variant="outline">₪{selectedJob.overtimeRate}</Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>שבת:</span>
+                        <Badge>₪{selectedJob.shabbatRate}</Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>נסיעה:</span>
+                        <Badge variant="secondary">₪{selectedJob.transportCost}</Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <div className="mb-6 p-4 border border-yellow-200 rounded-lg bg-yellow-50">
+              <p className="text-center text-yellow-800">
+                לא הוגדרו עבודות. 
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto font-normal text-yellow-900 underline"
+                  onClick={() => navigate("/job-settings")}
+                >
+                  לחץ כאן להגדרת עבודה ראשונה
+                </Button>
+              </p>
+            </div>
+          )}
+
           {/* Quick Start/Stop Shift */}
           <div className="mb-6 p-4 border border-border rounded-lg bg-card/30">
             <h3 className="text-lg font-semibold mb-3 text-center">מעקב זמן אמת</h3>
@@ -202,6 +284,7 @@ const ShiftLogger = () => {
                   onClick={startShift}
                   size="lg"
                   className="flex items-center gap-2 bg-income hover:bg-income/90"
+                  disabled={!selectedJobId}
                 >
                   <Play className="w-5 h-5" />
                   התחל משמרת
@@ -269,30 +352,26 @@ const ShiftLogger = () => {
               </div>
             </div>
 
-            {/* Hourly Rate */}
-            <div className="space-y-2">
-              <Label htmlFor="hourlyRate" className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                שכר לשעה (₪)
-              </Label>
-              <Input
-                type="number"
-                id="hourlyRate"
-                value={shift.hourlyRate}
-                onChange={(e) => setShift({ ...shift, hourlyRate: Number(e.target.value) })}
-                min="0"
-                step="0.5"
-              />
-            </div>
-
             {/* Earnings Preview */}
-            {earnings > 0 && (
+            {earningsData.totalEarnings > 0 && selectedJob && (
               <Card className="bg-income/5 border-income/20">
                 <CardContent className="pt-4">
-                  <div className="text-center">
+                  <div className="text-center mb-4">
                     <p className="text-sm text-muted-foreground">רווחים צפויים מהמשמרת</p>
-                    <p className="text-2xl font-bold text-income">₪{earnings.toFixed(2)}</p>
+                    <p className="text-3xl font-bold text-income">₪{earningsData.totalEarnings.toFixed(2)}</p>
                   </div>
+                  
+                  {earningsData.breakdown.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium flex items-center gap-2">
+                        <Calculator className="w-4 h-4" />
+                        פירוט החישוב:
+                      </p>
+                      {earningsData.breakdown.map((item, index) => (
+                        <p key={index} className="text-xs text-muted-foreground">{item}</p>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -301,7 +380,7 @@ const ShiftLogger = () => {
               type="submit" 
               className="w-full" 
               variant="income"
-              disabled={loading}
+              disabled={loading || !selectedJobId}
             >
               {loading ? "שומר..." : "שמור משמרת"}
             </Button>
