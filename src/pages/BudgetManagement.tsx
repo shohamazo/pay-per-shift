@@ -393,7 +393,7 @@ const BudgetManagement = () => {
                       <SelectValue placeholder="בחר תת-קטגוריה" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border-border shadow-lg z-50">
-                      <SelectItem value="" className="hover:bg-accent">
+                      <SelectItem value="none" className="hover:bg-accent">
                         ללא תת-קטגוריה
                       </SelectItem>
                       {getSubcategories(newExpense.category).map((subcat) => (
