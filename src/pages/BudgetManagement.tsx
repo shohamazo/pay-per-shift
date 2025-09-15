@@ -32,6 +32,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import BudgetAlerts from "@/components/budget/BudgetAlerts";
+import ExpenseTracker from "@/components/expenses/ExpenseTracker";
 
 interface Expense {
   id: string;
@@ -525,6 +527,10 @@ const BudgetManagement = () => {
           })}
         </div>
       )}
+
+      {/* Add Budget Alerts and Expense Tracker components */}
+      <BudgetAlerts />
+      <ExpenseTracker />
     </div>
   );
 };

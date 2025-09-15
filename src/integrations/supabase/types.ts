@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      budget_alerts: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_triggered_at: string | null
+          threshold_amount: number
+          threshold_percentage: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          threshold_amount?: number
+          threshold_percentage?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          threshold_amount?: number
+          threshold_percentage?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -45,6 +81,84 @@ export type Database = {
           is_recurring?: boolean
           name?: string
           subcategory?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      monthly_budgets: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          month: string
+          planned_amount: number
+          spent_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          month: string
+          planned_amount?: number
+          spent_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          month?: string
+          planned_amount?: number
+          spent_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      receipts: {
+        Row: {
+          created_at: string
+          expense_id: string | null
+          extracted_amount: number | null
+          extracted_date: string | null
+          extracted_text: string | null
+          extracted_vendor: string | null
+          id: string
+          image_data: string | null
+          image_url: string | null
+          processed_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expense_id?: string | null
+          extracted_amount?: number | null
+          extracted_date?: string | null
+          extracted_text?: string | null
+          extracted_vendor?: string | null
+          id?: string
+          image_data?: string | null
+          image_url?: string | null
+          processed_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expense_id?: string | null
+          extracted_amount?: number | null
+          extracted_date?: string | null
+          extracted_text?: string | null
+          extracted_vendor?: string | null
+          id?: string
+          image_data?: string | null
+          image_url?: string | null
+          processed_at?: string | null
           updated_at?: string
           user_id?: string
         }

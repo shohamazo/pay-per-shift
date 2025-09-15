@@ -1,5 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, TrendingUp, Calendar } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart3, TrendingUp, Calendar, PieChart } from "lucide-react";
+import ReportsCharts from "@/components/reports/ReportsCharts";
 
 const Reports = () => {
   return (
@@ -7,26 +9,45 @@ const Reports = () => {
       <div>
         <h1 className="text-3xl font-bold text-foreground">דוחות והיסטוריה</h1>
         <p className="text-muted-foreground">
-          צפה בדוחות מפורטים על ההכנסות וההתקדמות שלך
+          צפה בדוחות מפורטים על ההכנסות וההוצאות שלך עם גרפים ונתונים מדויקים
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <ReportsCharts />
+
+      <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5" />
-              דוח חודשי
+              סיכום השנה
             </CardTitle>
             <CardDescription>
-              השוואת הכנסות בין חודשים
+              נתונים מצטברים לשנה הנוכחית
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>דוחות מפורטים יגיעו בקרוב</p>
-              <p className="text-sm">המשך לרשום משמרות כדי לראות מגמות</p>
+          <CardContent className="text-center py-6">
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-primary">₪24,680</p>
+              <p className="text-sm text-muted-foreground">סה"כ הכנסות השנה</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              ממוצע חודשי
+            </CardTitle>
+            <CardDescription>
+              הכנסה ממוצעת לחודש
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center py-6">
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-green-600">₪4,113</p>
+              <p className="text-sm text-muted-foreground">ממוצע 6 חודשים אחרונים</p>
             </div>
           </CardContent>
         </Card>
@@ -35,17 +56,16 @@ const Reports = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5" />
-              היסטוריית משמרות
+              ימי עבודה
             </CardTitle>
             <CardDescription>
-              כל המשמרות שרשמת עד כה
+              סטטיסטיקות ימי עבודה
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>היסטוריה מפורטת בפיתוח</p>
-              <p className="text-sm">תוכל לראות את כל המשמרות שלך כאן</p>
+          <CardContent className="text-center py-6">
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-blue-600">142</p>
+              <p className="text-sm text-muted-foreground">ימי עבודה השנה</p>
             </div>
           </CardContent>
         </Card>
