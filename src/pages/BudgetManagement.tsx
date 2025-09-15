@@ -233,11 +233,10 @@ const BudgetManagement = () => {
             is_recurring: newExpense.is_recurring,
           });
         
-        const { data, error } = await insertResult.select().single();
-
-        if (error) throw error;
+        if (insertResult.error) throw insertResult.error;
+        const newData = insertResult.data;
         
-        setExpenses([data, ...expenses]);
+        setExpenses([newData, ...expenses]);
         
         toast({
           title: "ההוצאה נוספה בהצלחה",
