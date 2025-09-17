@@ -224,7 +224,7 @@ const BudgetManagement = () => {
           description: `${newExpense.name} עודכן`,
         });
       } else {
-        const insertResult = await supabase
+        const { data: newData, error } = await supabase
           .from('expenses')
           .insert({
             user_id: user.id,
@@ -233,10 +233,11 @@ const BudgetManagement = () => {
             category: newExpense.category,
             subcategory: newExpense.subcategory,
             is_recurring: newExpense.is_recurring,
-          });
+          })
+          .select()
+          .single();
         
-        if (insertResult.error) throw insertResult.error;
-        const newData = insertResult.data;
+        if (error) throw error;
         
         setExpenses([newData, ...expenses]);
         
@@ -307,7 +308,7 @@ const BudgetManagement = () => {
     return category?.subcategories || [];
   };
 
-  const totalMonthlyExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalMonthlyExpenses = expenses.filter(expense => expense && typeof expense.amount === 'number').reduce((sum, expense) => sum + expense.amount, 0);
 
   if (loading) {
     return (
